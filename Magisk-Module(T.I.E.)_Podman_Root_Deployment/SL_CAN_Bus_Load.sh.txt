@@ -1,0 +1,15 @@
+#!/bin/bash
+# T.I.E | CAN Bus Load Utility
+# ------------------------------------------------------------------------------
+# PURPOSE:  Interacts with CAN bus using slcan and canbusload.
+# USAGE:    slcan canbusload can0@100000 -r -t -b -c session_resp.json ./auth_config.ini
+# ------------------------------------------------------------------------------
+
+set -euo pipefail
+
+echo "[*] Initializing CAN Bus Load sequence..."
+
+# Execute the command
+slcan canbusload can0@100000 -r -t -b -c session_resp.json ./auth_config.ini
+
+echo "[SUCCESS] CAN Bus Load operation complete."

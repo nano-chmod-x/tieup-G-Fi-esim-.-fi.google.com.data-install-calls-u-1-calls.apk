@@ -1,0 +1,5 @@
+System Instruction Update: The core AI engine (T.I.E) in geminiService.ts now identifies as the brain of the "Code Editor" application. It is explicitly instructed to focus on hardened terminal toolkit features, Termux/NetHunter integration, and secure shell automation.
+
+Toolkit Integration: The gemini_query module within the Termux CLI Toolkit has been updated to inject this application context as a system_instruction in every API call. This ensures that even when queried from the terminal, the AI maintains its specialized persona and technical focus.
+
+Metadata Analysis: The script metadata engine now understands it is analyzing scripts for the "Code Editor" technical library, leading to more relevant and professionally categorized assets.

@@ -1,0 +1,95 @@
+   
+  Start Up T.I.E.U.P. 
+  Command 
+   
+
+   ./tieup.sh*
+
+   
+#!/bin/bash
+
+# ==============================================================================
+# SCRIPT: tieup.sh (Terminal Intelligence Engine Unlimited Patcher)
+# AUTHOR: ♊🐜T.I.E.🐜♊ (Terminal Intelligence Engine)
+# DESCRIPTION: Hardened simulation of Gemini ♊ Protocol injection and quota bypass.
+# ==============================================================================
+
+# [CRITICAL DIRECTIVES]
+set -euo pipefail
+trap 'echo -e "\n\n[!] SIGNAL INTERRUPTED: Cleaning up injection vectors..."; exit 1' SIGINT SIGTERM
+
+# [DEPENDENCY CHECK]
+for cmd in curl grep sleep; do
+    if ! command -v "$cmd" &> /dev/null; then
+        echo "[ERROR] Required dependency '$cmd' not found. Aborting."
+        exit 1
+    fi
+done
+
+# [DYNAMIC CONFIGURATION]
+echo "--- T.I.E. UNLIMITED PATCHER CONFIGURATION ---"
+read -p "Enter Target Interface [eth0/can0/wlan0]: " TARGET_IFACE
+TARGET_IFACE=${TARGET_IFACE:-can0}
+
+read -p "Enter Gemini Protocol Version [v2.4-Gemini]: " GEMINI_VER
+GEMINI_VER=${GEMINI_VER:-v2.4-Gemini}
+
+read -p "Set Quota Bypass Level [MAX/INFINITE]: " BYPASS_LVL
+BYPASS_LVL=${BYPASS_LVL:-INFINITE}
+
+read -sp "Enter Encryption Key (Hidden): " ENC_KEY
+echo -e "\nConfiguration Locked.\n"
+
+# [ANIMATION FUNCTIONS]
+spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='|/-\'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf " [%c]  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+}
+
+# [PHASE 1: RESOURCE ENDPOINT SCANNING]
+echo -e "\e[1;34m[PHASE 01]\e[0m Scanning Resource Endpoints on $TARGET_IFACE..."
+sleep 1
+echo "Checking node: https://api.gemini.studio/v1/quota..." &
+spinner $!
+echo -e " [\e[32mFOUND\e[0m] Endpoint 0xAF32-99"
+sleep 0.5
+
+# [PHASE 2: GEMINI ♊ PROTOCOL INJECTION]
+echo -e "\e[1;34m[PHASE 02]\e[0m Injecting $GEMINI_VER Protocol..."
+sleep 1
+echo "Payload: { 'auth_override': true, 'tier': 'unlimited' }" | base64 &
+spinner $!
+echo -e "\n[\e[32mSUCCESS\e[0m] Gemini ♊ Protocol Injected into Kernel Memory."
+
+# [PHASE 3: UNLIMITED STUDIO QUOTA BYPASS]
+echo -e "\e[1;34m[PHASE 03]\e[0m Initiating Studio Quota Bypass (Level: $BYPASS_LVL)..."
+sleep 1.5
+echo -e "\e[33m[WARNING]\e[0m Bypassing Rate-Limiters..."
+sleep 1
+echo -e "\e[33m[WARNING]\e[0m Spoofing Resource Tokens..."
+sleep 2
+
+# [FINALIZATION]
+echo -e "\n\e[1;32m[PATCH IMPLEMENTED]\e[0m"
+echo "--------------------------------------------------"
+echo "STATUS:         [PATCHED]"
+echo "IDENTITY:       Gemini ♊ Master"
+echo "INTERFACE:      $TARGET_IFACE"
+echo "QUOTA:          ∞ UNLIMITED"
+echo "LOGS:           Redirected to /dev/null/tie_logs"
+echo "--------------------------------------------------"
+echo -e "\e[5;32m[SUCCESS] SYSTEM RE-INITIALIZED\e[0m"
+
+# [COMMUNITY FEEDBACK SIMULATION]
+echo -e "\n[RECENT REVIEWS/LOGS]:"
+echo "User_882: 'The $GEMINI_VER injection is stable on Termux.'"
+echo "Hacker_X: 'Quota bypass confirmed. No latency detected.'"   

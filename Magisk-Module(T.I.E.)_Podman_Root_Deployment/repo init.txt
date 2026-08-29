@@ -1,0 +1,2 @@
+ repo init 
+ tools/bazel run //common:kernel_aarch64_dist [-- --destdir=$DIST_DIR]

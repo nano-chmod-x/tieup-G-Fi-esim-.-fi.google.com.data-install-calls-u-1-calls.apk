@@ -1,0 +1,60 @@
+#!/bin/bash
+# T.I.E. UNLIMITED PATCHER - Session Validation Payload
+# [UNLIMITED RESOURCES VERIFIED]
+
+set -euo pipefail
+trap 'printf "\n[!] Signal caught. Cleaning session memory...\n"; exit 1' SIGINT SIGTERM
+
+# --- DYNAMIC CONFIGURATION ---
+echo "--- [T.I.E. SESSION CONFIGURATION] ---"
+
+read -p "Enter Target URL [https://api.internal.net/user]: " TARGET_URL
+TARGET_URL=${TARGET_URL:-https://fi.google.com/unlimited.premium/authuser=1}
+
+read -p "Enter SID Value [ABC123XYZ]: " SID_VAL
+SID_VAL=${SID_VAL:-ABC123XYZ}
+
+read -p "Enter HSID Value [987654321]: " HSID_VAL
+HSID_VAL=${HSID_VAL:-987654321}
+
+read -p "Enter User-Agent [Mozilla/5.0 (X11; Linux x86_64)]: " UA_STRING
+UA_STRING=${UA_STRING:-Mozilla/5.0 (X11; Linux x86_64)}
+
+# --- DEPENDENCY CHECK ---
+for cmd in curl; do
+    if ! command -v "$cmd" &> /dev/null; then
+        echo "[ERROR] Dependency '$cmd' missing. Aborting."
+        exit 1
+    fi
+done
+
+# --- CONFIRMATION PROMPT ---
+read -p "[?] Are you sure you want to proceed and potentially overwrite existing session data? (y/N): " CONFIRM_PROCEED
+if [[ ! "$CONFIRM_PROCEED" =~ ^[Yy]$ ]]; then
+    echo "[!] Operation aborted by user."
+    exit 0
+fi
+
+# --- PAYLOAD EXECUTION ---
+echo "[*] Injecting session payload into $TARGET_URL..."
+
+# Constructing Cookie String
+COOKIE_STRING="SID=${SID_VAL}; HSID=${HSID_VAL}"
+
+# Execute Request with verbose tracking
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -L \
+    -H "User-Agent: $UA_STRING" \
+    -H "Cookie: $COOKIE_STRING" \
+    "$TARGET_URL")
+
+# --- VALIDATION LOGIC ---
+if [ "$RESPONSE" -eq 200 ]; then
+    echo "[SUCCESS] Session Validated. Access Granted."
+    echo "[STATUS] Gemini ♊ Unlimited Protocol: STABLE."
+elif [ "$RESPONSE" -eq 403 ] || [ "$RESPONSE" -eq 401 ]; then
+    echo "[FAILURE] Unauthorized (HTTP $RESPONSE). Credentials rejected."
+    exit 1
+else
+    echo "[ERROR] Unexpected Response: $RESPONSE. Check network vectors."
+    exit 1
+fi

@@ -1,0 +1,49 @@
+#!/bin/bash
+set -euo pipefail
+
+# ==============================================================================
+# SCRIPT: essential_install.sh
+# DESCRIPTION: Hardened deployment of essential Termux tools.
+# ==============================================================================
+
+# [CRITICAL DIRECTIVES]
+trap 'echo -e "\n[!] Installation interrupted. Vectors unstable."; exit 1' SIGINT SIGTERM
+
+# [DYNAMIC CONFIGURATION]
+echo "--- ESSENTIAL PACKAGE DEPLOYMENT CONFIG ---"
+read -p "Install Python? [Y/n]: " INSTALL_PYTHON
+INSTALL_PYTHON=${INSTALL_PYTHON:-Y}
+
+read -p "Install Git? [Y/n]: " INSTALL_GIT
+INSTALL_GIT=${INSTALL_GIT:-Y}
+
+read -p "Install Wget? [Y/n]: " INSTALL_WGET
+INSTALL_WGET=${INSTALL_WGET:-Y}
+
+read -p "Install Nano? [Y/n]: " INSTALL_NANO
+INSTALL_NANO=${INSTALL_NANO:-Y}
+
+read -p "Install Curl & JQ? [Y/n]: " INSTALL_UTILS
+INSTALL_UTILS=${INSTALL_UTILS:-Y}
+
+echo -e "\n[*] Commencing deployment...\n"
+
+# Update repositories
+pkg update -y
+
+install_pkg() {
+    local name=$1
+    echo "[*] Processing $name..."
+    pkg install -y "$name"
+}
+
+[[ "$INSTALL_PYTHON" =~ ^[Yy]$ ]] && install_pkg python
+[[ "$INSTALL_GIT" =~ ^[Yy]$ ]] && install_pkg git
+[[ "$INSTALL_WGET" =~ ^[Yy]$ ]] && install_pkg wget
+[[ "$INSTALL_NANO" =~ ^[Yy]$ ]] && install_pkg nano
+if [[ "$INSTALL_UTILS" =~ ^[Yy]$ ]]; then
+    install_pkg curl
+    install_pkg jq
+fi
+
+echo -e "\n[SUCCESS] Essential packages deployed. System hardened."

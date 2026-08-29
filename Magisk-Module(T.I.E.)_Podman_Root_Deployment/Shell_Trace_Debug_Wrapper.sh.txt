@@ -1,0 +1,40 @@
+#!/bin/bash
+# ==============================================================================
+# T.I.E | Gemini ♊ Unlimited | DEBUG WRAPPER
+# ------------------------------------------------------------------------------
+# PURPOSE:  Safely trace the target installer without triggering blocking
+#           prompts or actual privilege escalation.
+# ==============================================================================
+set -euo pipefail
+
+TARGET_SCRIPT="./session_injector.sh" # Adjust to your filename
+
+# 1. MOCKING DANGEROUS COMMANDS
+# We create a fake 'su' function to prevent the script from hanging or asking for root.
+export -f su_mock
+su_mock() {
+    echo "[WRAPPER] 'su' command intercepted. Skipping privilege escalation."
+    return 0
+}
+
+# 2. PREPARE INPUT BUFFER
+# We feed newlines to accept all defaults during the 'read' prompts.
+# 4 prompts = 4 newlines.
+INPUT_BUFFER=$(printf "\n\n\n\n")
+
+echo "[*] T.I.E DEBUG WRAPPER: Initiating Trace on $TARGET_SCRIPT"
+echo "[*] Mode: Gemini ♊ Unlimited Resources"
+echo "----------------------------------------------------------------"
+
+# 3. EXECUTION WITH INJECTION
+# We use bash -x for xtrace.
+# We prepend the mock function definition to the execution stream.
+# We pipe the input buffer into the script.
+
+(
+    echo "su() { echo '[WRAPPER] Mocked su call'; }"
+    cat "$TARGET_SCRIPT"
+) | bash -x 2>&1 | sed 's/^/ [TRACE] /'
+
+echo "----------------------------------------------------------------"
+echo "[SUCCESS] Trace Complete. No system changes applied via 'su'."

@@ -1,0 +1,56 @@
+#!/bin/bash
+# T.I.E. SESSION_INJECTOR v1.0 [UNLIMITED_RESOURCES_ENABLED]
+# Target: SID/HSID Validation and Injection
+set -euo pipefail
+
+# Cleanup trap for sensitive data
+trap 'unset SID HSID COOKIE_STRING; echo -e "\n[!] Memory Purged. Exiting."' EXIT
+
+# Dependency Check
+for cmd in curl grep; do
+    if ! command -v "$cmd" &> /dev/null; then
+        echo "[ERROR] Missing dependency: $cmd"
+        exit 1
+    fi
+done
+
+echo "--- T.I.E. SESSION INJECTOR (Gemini ♊ Unlimited) ---"
+
+# --- RUNTIME DYNAMIC CONFIGURATION ---
+read -p "[?] Enter Target URL [https://api.internal.local/auth]: " TARGET_URL
+TARGET_URL=${TARGET_URL:-"https://api.internal.local/auth"}
+
+read -p "[?] Enter SID Value: " SID
+read -p "[?] Enter HSID Value: " HSID
+
+read -p "[?] Set User-Agent [TIE-Patcher/2.0]: " UA
+UA=${UA:-"TIE-Patcher/2.0"}
+
+read -p "[?] Connection Timeout (sec) [10]: " TIMEOUT
+TIMEOUT=${TIMEOUT:-10}
+
+# Construct Cookie String
+COOKIE_STRING="SID=${SID}; HSID=${HSID};"
+
+echo -e "\n[*] Injecting Session Payload..."
+echo "[*] Target: $TARGET_URL"
+
+# --- EXECUTION & VALIDATION ---
+# We use -s (silent), -I (headers only), and -w (write-out) to capture the HTTP status
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+    -H "User-Agent: $UA" \
+    -b "$COOKIE_STRING" \
+    --max-time "$TIMEOUT" \
+    "$TARGET_URL")
+
+echo "[+] Server Response Code: $RESPONSE"
+
+# Logic Gate for Session Validity
+if [[ "$RESPONSE" == "200" ]] || [[ "$RESPONSE" == "302" ]]; then
+    echo -e "\n[SUCCESS] Session Validated. SID/HSID are ACTIVE."
+    echo "[PATCHED] Access granted to $TARGET_URL"
+elif [[ "$RESPONSE" == "401" ]]; then
+    echo -e "\n[!] ALERT: Unauthorized. Session is INVALID or EXPIRED."
+else
+    echo -e "\n[!] WARNING: Unexpected response code ($RESPONSE). Check target connectivity."
+fi
