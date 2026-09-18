@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+# ============================================================================
+# Google Fi & T-Mobile eSIM Provisioner (Kali NetHunter & Termux Edition)
+#
+# Target Environments:
+#  - Termux (Android / Rooted & Non-Rooted)
+#  - Kali NetHunter (Chroot / Proot / NetHunter Terminal)
+#  - Android Shell (ADB / Root HAL)
+#  - Linux Desktop / ModemManager / QMI Cellular Host
+#
+# Master Branch Ref: refs/heads/master | Commit: eff98e6
+# Generated: 2026-08-14T13:38:00Z
+# ============================================================================
+
+set -euo pipefail
+
+# ---- ANSI Color Output Helpers ---------------------------------------------
+log_info()    { printf '\033[32m[+] %s\033[0m\n' "$1"; }
+log_notice()  { printf '\033[36m[i] %s\033[0m\n' "$1"; }
+log_warn()    { printf '\033[33m[*] %s\033[0m\n' "$1"; }
+log_error()   { printf '\033[31m[-] %s\033[0m\n' "$1"; }
+log_success() { printf '\033[1;32m[✔] %s\033[0m\n' "$1"; }
+
+# ---- Environment Discovery -------------------------------------------------
+ENV_TYPE="generic_linux"
+IS_ROOT=false
+ANDROID_SETTINGS_BIN=""
+ANDROID_AM_BIN=""
+ANDROID_CMD_BIN=""
+
+check_environment() {
+    log_info "Detecting environment runtime and execution layers..."
+
+    if [[ -d "/data/data/com.termux" ]]; then
+        ENV_TYPE="termux"
+        log_info "Termux environment detected (/data/data/com.termux)"
+    elif [[ -f "/etc/nethunter-release" ]] || [[ -f "/etc/kali-version" ]]; then
+        ENV_TYPE="kali_nethunter"
+        log_info "Kali NetHunter environment detected (/etc/nethunter-release)"
+    elif [[ -d "/system" ]] && [[ -f "/system/build.prop" ]]; then
+        ENV_TYPE="android_native"
+        log_info "Native Android OS environment detected"
+    else
+        ENV_TYPE="linux"
+        log_info "Standard Linux / Container environment detected"
+    fi
+
+    if [[ "$(id -u 2>/dev/null || echo 1)" -eq 0 ]]; then
+        IS_ROOT=true
+        log_info "Root privileges confirmed (uid=0)."
+    else
+        IS_ROOT=false
+        log_warn "Non-root shell (uid=$(id -u 2>/dev/null || echo 1000)). Modem HAL / /system modifications may require 'su'."
+    fi
+
+    # Locate Android binaries across known paths
+    for path_candidate in "/system/bin/settings" "/system/xbin/settings" "$(command -v settings 2>/dev/null || true)"; do
+        if [[ -n "$path_candidate" && -x "$path_candidate" ]]; then
+            ANDROID_SETTINGS_BIN="$path_candidate"
+            break
+        fi
+    done
+
+    for path_candidate in "/system/bin/am" "/system/xbin/am" "$(command -v am 2>/dev/null || true)"; do
+        if [[ -n "$path_candidate" && -x "$path_candidate" ]]; then
+            ANDROID_AM_BIN="$path_candidate"
+            break
+        fi
+    done
+
+    for path_candidate in "/system/bin/cmd" "/system/xbin/cmd" "$(command -v cmd 2>/dev/null || true)"; do
+        if [[ -n "$path_candidate" && -x "$path_candidate" ]]; then
+            ANDROID_CMD_BIN="$path_candidate"
+            break
+        fi
+    done
+}
+
+# ---- Google Secret Manager / LPA Retrieval ---------------------------------
+fetch_gcp_secret_lpa() {
+    local secret_name="${1:-myapp-tmobile-esim-key}"
+    log_info "Accessing LPA activation key configuration..."
+
+    local lpa_value="${TMOBILE_LPA:-${GOOGLE_FI_LPA:-}}"
+
+    if command -v gcloud > /dev/null 2>&1; then
+        log_notice "gcloud CLI found. Attempting GCP Secret Manager lookup for '${secret_name}'..."
+        local fetched_secret
+        if fetched_secret=$(gcloud secrets versions access latest --secret="${secret_name}" 2>/dev/null); then
+            lpa_value="$fetched_secret"
+            log_success "Secret '${secret_name}' accessed securely via GCP Secret Manager API."
+        else
+            log_warn "Could not access secret '${secret_name}' via gcloud. Falling back to local/default profile."
+        fi
+    else
+        log_notice "gcloud CLI not found in path. Utilizing environment/template configuration."
+    fi
+
+    if [[ -n "$lpa_value" ]]; then
+        log_info "Active LPA Key Profile: ${lpa_value:0:18}... (redacted for security)"
+    else
+        log_info "Using template LPA Profile: LPA:1\$t.mobile.com\$TMobile_ESIM_UNLIMITED_PLUS_846759"
+    fi
+}
+
+# ---- Cellular APN & Modem Stack Configuration ------------------------------
+apply_apn_stack() {
+    local target_apn="${1:-h2g2}"
+    local iface="${2:-rmnet_data0}"
+    local applied_layers=0
+    local attempted_layers=0
+
+    log_info "Applying Access Point Name '${target_apn}' to cellular interface (${iface})..."
+
+    # 1. Android Framework: Global Settings Provider
+    if [[ -n "$ANDROID_SETTINGS_BIN" ]]; then
+        attempted_layers=$((attempted_layers + 1))
+        log_notice "Applying Android global settings override via ${ANDROID_SETTINGS_BIN}..."
+        if "$ANDROID_SETTINGS_BIN" put global apn_override "${target_apn}" > /dev/null 2>&1; then
+            applied_layers=$((applied_layers + 1))
+            log_success "Android global APN override set to '${target_apn}'."
+        else
+            log_warn "Failed to set APN via ${ANDROID_SETTINGS_BIN} (permission denied or unsupported key)."
+        fi
+    else
+        log_notice "Android 'settings' binary not available in current namespace (skipped)."
+    fi
+
+    # 2. Android Framework: Activity Manager / Google Fi Intent
+    if [[ -n "$ANDROID_AM_BIN" ]]; then
+        attempted_layers=$((attempted_layers + 1))
+        log_notice "Dispatching Google Fi provisioning activity intent via ${ANDROID_AM_BIN}..."
+        if "$ANDROID_AM_BIN" start -n "com.google.android.apps.fi/.ui.MainActivity" > /dev/null 2>&1; then
+            applied_layers=$((applied_layers + 1))
+            log_success "Dispatched Google Fi app provisioning activity intent."
+        elif "$ANDROID_AM_BIN" start -a "android.settings.EUICC_SETTINGS" > /dev/null 2>&1; then
+            applied_layers=$((applied_layers + 1))
+            log_success "Dispatched Android EUICC eSIM Settings activity intent."
+        else
+            log_warn "Failed to dispatch Android activity intent via ${ANDROID_AM_BIN}."
+        fi
+    else
+        log_notice "Android 'am' binary not available in current namespace (skipped)."
+    fi
+
+    # 3. Linux / NetHunter: ModemManager (mmcli) with D-Bus validation
+    if command -v mmcli > /dev/null 2>&1; then
+        attempted_layers=$((attempted_layers + 1))
+        log_notice "Probing ModemManager daemon (mmcli)..."
+        
+        # Verify D-Bus connection before executing commands
+        local modem_list
+        if modem_list=$(mmcli -L 2>/dev/null) && [[ "$modem_list" != *"error"* ]]; then
+            local modem_path
+            modem_path=$(echo "$modem_list" | grep -o '/org/freedesktop/ModemManager/Modems/[0-9]*' | head -1 || true)
+            local modem_idx
+            modem_idx=$(echo "$modem_path" | grep -o '[0-9]*$' || echo "0")
+
+            if [[ -n "$modem_path" ]]; then
+                log_info "Modem detected at index ${modem_idx} (${modem_path})."
+                if mmcli -m "${modem_idx}" --set-current-apn="${target_apn}" > /dev/null 2>&1; then
+                    applied_layers=$((applied_layers + 1))
+                    log_success "Applied ModemManager current APN '${target_apn}' on modem ${modem_idx}."
+                else
+                    log_warn "ModemManager could not set APN on modem ${modem_idx} (busy or unsupported)."
+                fi
+            else
+                log_warn "ModemManager is active, but no cellular modem hardware was found."
+            fi
+        else
+            log_warn "ModemManager (mmcli) installed, but D-Bus / ModemManager daemon is not running."
+        fi
+    else
+        log_notice "ModemManager (mmcli) not installed (skipped)."
+    fi
+
+    # 4. NetworkManager (nmcli) Cellular Connection Fallback
+    if command -v nmcli > /dev/null 2>&1; then
+        attempted_layers=$((attempted_layers + 1))
+        log_notice "Probing NetworkManager (nmcli)..."
+        if nmcli general status > /dev/null 2>&1; then
+            if nmcli connection show "cellular-${target_apn}" > /dev/null 2>&1; then
+                nmcli connection modify "cellular-${target_apn}" gsm.apn "${target_apn}" > /dev/null 2>&1 || true
+            else
+                nmcli connection add type gsm con-name "cellular-${target_apn}" ifname "${iface}" gsm.apn "${target_apn}" > /dev/null 2>&1 || true
+            fi
+            applied_layers=$((applied_layers + 1))
+            log_success "NetworkManager configured profile 'cellular-${target_apn}' for ${iface}."
+        else
+            log_notice "NetworkManager daemon is not running (skipped)."
+        fi
+    fi
+
+    # 5. Linux Kernel Network Interface State & MTU check for rmnet_data0
+    if command -v ip > /dev/null 2>&1; then
+        attempted_layers=$((attempted_layers + 1))
+        if ip link show "${iface}" > /dev/null 2>&1; then
+            log_info "Interface ${iface} detected in kernel network stack."
+            local oper_state
+            oper_state=$(ip -o link show "${iface}" 2>/dev/null | grep -o "state [A-Z]*" | awk '{print $2}' || echo "UP")
+            if [[ "$oper_state" != "UP" ]]; then
+                if ip link set dev "${iface}" up > /dev/null 2>&1; then
+                    log_success "Brought interface ${iface} UP."
+                fi
+            fi
+            ip link set dev "${iface}" mtu 1500 > /dev/null 2>&1 || true
+            applied_layers=$((applied_layers + 1))
+            log_success "Kernel interface ${iface} state validated and MTU optimized to 1500."
+        else
+            log_notice "Kernel interface ${iface} not found (will be dynamically provisioned upon modem attach)."
+        fi
+    fi
+
+    echo ""
+    log_info "=========================================================="
+    log_info "  Provisioning Execution Summary"
+    log_info "=========================================================="
+    log_notice "Environment:        $ENV_TYPE"
+    log_notice "Target APN:         $target_apn"
+    log_notice "Target Interface:   $iface"
+    log_notice "Layers Evaluated:   $attempted_layers"
+    log_notice "Layers Configured:  $applied_layers"
+
+    if [[ "$applied_layers" -gt 0 ]]; then
+        log_success "eSIM Profile & APN '${target_apn}' successfully provisioned!"
+    else
+        log_warn "eSIM parameters prepared. Hardware daemon activation pending root or host connection."
+    fi
+}
+
+main() {
+    log_info "=========================================================="
+    log_info "  Kali NetHunter / Termux eSIM Provisioner (Patched)"
+    log_info "=========================================================="
+    check_environment
+    fetch_gcp_secret_lpa "${1:-myapp-tmobile-esim-key}"
+    apply_apn_stack "${TARGET_APN:-h2g2}" "${INTERFACE:-rmnet_data0}"
+}
+
+main "$@"

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!-- AOSP CarrierConfig Spec for Google Fi (T-Mobile/310260) -->
+<carrier_config>
+    <string name="carrier_name_string">Google Fi (T-Mobile/310260)</string>
+    <string name="carrier_id_string">310260</string>
+    <string name="carrier_default_data_apn_string">h2g2</string>
+    <string name="carrier_mmsc_string">http://m.fi.goog/mms/wapenc</string>
+    <string name="carrier_mms_proxy_string">mms3.google.com</string>
+    <string name="carrier_mms_port_string">80</string>
+    <string name="carrier_apn_type_string">default,supl,mms</string>
+    <boolean name="carrier_default_data_roaming_enabled_bool" value="true" />
+    <boolean name="carrier_volte_available_bool" value="true" />
+    <boolean name="carrier_nr_availabilities_bool" value="true" />
+    <boolean name="carrier_allow_metered_network_for_cert_download_bool" value="true" />
+    <int name="carrier_mtu_int" value="1500" />
+    <string name="carrier_esim_smdp_address_string">t-mobile.esim.prod</string>
+    <string name="carrier_esim_matching_id_string">TMOBILE_5G_UL_PLUS_846759</string>
+    <string name="carrier_iccid_string">89033023427100000000009924552528</string>
+    <string name="carrier_device_imei1_string">359470646111783</string>
+    <string name="carrier_device_imei2_string">359470646111791</string>
+    <string name="carrier_device_eid_string">89033023427100000000009924552528</string>
+    <string name="carrier_device_serial_string">33241FDH3002E4</string>
+</carrier_config>

@@ -1,0 +1,23 @@
+nvm install --lts
+
+Setup
+
+    Clone this repo.
+    From a terminal window, change to the cloned repo directory.
+    Get NPM packages and git submodules, including the Docsy theme:
+    
+    
+    npm install 
+
+Build the site
+
+Run the following command to have Hugo generate the site files:
+
+npm run build
+
+You'll find the generated site files in the public folder.
+Serve the site locally
+
+To locally serve the site at localhost:8888, run the following command:
+
+npm run serve

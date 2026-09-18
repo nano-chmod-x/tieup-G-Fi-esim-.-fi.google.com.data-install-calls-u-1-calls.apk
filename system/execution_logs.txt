@@ -1,0 +1,7 @@
+[07:26:33] [INFO] [INFO] Loaded T-Mobile Direct SGP.22 Manifest Preset (with PIN 9021)
+[07:26:59] [SUCCESS] [SUCCESS] Saved vector SVG QR Code for format: lpa_string
+[07:27:08] [INFO] [UPnP] Broadcasting M-SEARCH SSDP discovery to 239.255.255.250:1900...
+[07:27:08] [SUCCESS] [UPnP] Found IGD v2.0 Root Device: Verizon 5G UWB Gateway / MiniUPnPd 2.2.3 at 192.168.1.1:5000/rootDesc.xml
+[07:27:08] [SUCCESS] [UPnP] WANIPConnection service queried: External IP is 198.228.212.84
+[07:27:09] [INFO] [UPnP] Adding WAN port mappings via AddPortMapping action on WANIPConnection:1...
+[07:27:09] [SUCCESS] [UPnP] Ports 5060/UDP, 4500/UDP, 500/UDP, 8443/TCP forwarded to 192.168.1.105 (Lease: 86400s)
